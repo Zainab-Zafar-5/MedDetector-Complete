@@ -1,0 +1,94 @@
+.how {
+  padding: 56px 32px;
+  background: #050926;
+  color: #fff;
+  text-align: left;
+}
+
+.heading {
+  font-size: 1.875rem;
+  margin: 0 0 28px 0;
+  font-weight: 700;
+}
+
+/* grid layout for three items */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+  align-items: stretch;
+}
+
+.stepCard {
+  background: linear-gradient(180deg, rgba(16,22,58,0.95), rgba(11,15,35,0.95));
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stepCard:hover {
+  transform: translateY(-6px);          /* lifts the card */
+  box-shadow: 0 12px 24px rgba(0,0,0,0.2); /* subtle shadow */
+}
+:global(.search) {
+  border: 2px solid #f2c94c; /* yellow */
+}
+
+:global(.report) {
+  border: 2px solid #ff6b6b; /* red */
+}
+
+:global(.connect) {
+  border: 2px solid #4fc3f7; /* blue */
+}
+
+
+.iconWrap {
+  display: flex;
+  justify-content: center;
+}
+
+/* small circle placeholder for icon */
+.iconCircle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #f2c94c;
+  color: #081021;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.stepCard:hover .iconCircle {
+  transform: scale(1.1);
+  background: #e0b93f; /* slightly brighter yellow */
+}
+
+
+
+.stepTitle {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.stepText {
+  margin: 0;
+  color: #c7cfdb;
+  line-height: 1.5;
+  font-size: 0.98rem;
+}
+
+/* responsive */
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

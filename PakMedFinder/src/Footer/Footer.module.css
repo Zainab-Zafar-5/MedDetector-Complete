@@ -1,0 +1,115 @@
+/* Footer Container - Dark Navy Background */
+.footer {
+  background-color: #050A30; 
+  padding: 60px 40px 20px 40px;
+  color: white;
+  font-family: sans-serif;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr; /* Three columns */
+  gap: 40px;
+  padding-bottom: 40px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* --- Column Styling --- */
+.column {
+  margin-bottom: 20px;
+}
+
+/* Logo */
+.logo {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #facc15; /* Yellow Accent */
+  margin-bottom: 15px;
+}
+
+.description {
+  font-size: 0.95rem;
+  color: #d0d6e0;
+  line-height: 1.6;
+}
+
+/* Column Titles */
+.columnTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: white;
+  /* Aapke CTA button jaisi underline yahan bhi de sakte hain */
+  /* border-bottom: 2px solid #facc15; padding-bottom: 5px; */
+}
+
+/* Link List */
+.linkList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.linkList li {
+  margin-bottom: 10px;
+}
+
+.link {
+  color: #d0d6e0;
+  text-decoration: none;
+  transition: color 0.3s;
+  font-size: 0.95rem;
+}
+
+.link:hover {
+  color: #facc15; /* Yellow on hover */
+}
+
+/* Contact Info (if not a link) */
+.contactIcon {
+  margin-right: 8px;
+  color: #facc15;
+}
+
+/* Social Media Icons */
+.socialIcons {
+  margin-top: 20px;
+}
+
+.icon {
+  font-size: 1.5rem;
+  margin-right: 15px;
+  color: #d0d6e0;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.icon:hover {
+  color: #facc15;
+}
+
+/* --- Copyright Bar --- */
+.copyright {
+  text-align: center;
+  padding-top: 20px;
+}
+
+.copyright p {
+  font-size: 0.85rem;
+  color: #888;
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    grid-template-columns: 1fr; /* Single column on mobile */
+    text-align: center;
+  }
+  .socialIcons {
+    justify-content: center;
+    display: flex;
+  }
+}

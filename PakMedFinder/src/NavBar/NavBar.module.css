@@ -1,0 +1,166 @@
+/* --- NAV BAR: DARK NAVY THEME --- */
+
+.navbar {
+  position: fixed; 
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-color: #050A30; 
+  z-index: 10000; /* Super high z-index (Sahi hai) */
+  height: 75px; 
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 15px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* --- Logo Styling --- */
+.logo {
+  font-size: 1.6rem;
+  font-weight: 700;
+  /* Logo ko z-index dein taake menu se upar rahe */
+  z-index: 10003; 
+}
+.med { color: white; }
+.detector { color: #facc15; }
+
+/* --- Desktop Nav Links and CTAs Layout --- */
+.navContent {
+    display: flex; 
+    align-items: center; 
+    flex-grow: 1; 
+    justify-content: flex-end; 
+}
+.navLinks {
+    display: flex; 
+    gap: 25px; 
+    margin-right: auto; 
+    margin-left: 100px; 
+}
+.link {
+  color: #d0d6e0; 
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 5px 0;
+  transition: color 0.3s, border-bottom 0.3s;
+}
+.link:hover {
+  color: #facc15; 
+  border-bottom: 2px solid #facc15;
+}
+.ctaButtons {
+  display: flex;
+  gap: 10px;
+}
+.reportBtn, .searchBtn { /* Common styles for CTA buttons */
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    text-decoration: none;
+    padding: 10px 18px;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.3s;
+}
+.reportBtn {
+    border: 1px solid white; 
+    background-color: transparent;
+    color: white; 
+}
+.reportBtn:hover {
+    background-color: white; 
+    color: #050A30; 
+}
+.searchBtn {
+    background-color: #facc15; 
+    color: #1e1e1e; 
+    border: 1px solid #facc15;
+}
+.searchBtn:hover {
+    opacity: 0.9;
+}
+
+/* Hide the toggle button on Desktop */
+.menuToggle {
+    display: none;
+}
+/* --- MOBILE VIEW FIXES (Screen < 900px) --- */
+@media (max-width: 900px) {
+    
+    /* Mobile Container Padding (Sahi hai) */
+    .container {
+        padding: 15px 20px;
+    }
+    
+    /* Hamburger button (Sahi hai) */
+    .menuToggle {
+        display: block; 
+        z-index: 10002; 
+        color: white; 
+        font-size: 1.5rem;
+        background: none;
+        border: none;
+        cursor: pointer;
+    }
+
+    /* Nav Content (Menu Panel) - Default: Hidden */
+    .navContent {
+        display: none; /* Default band rahega */
+        flex-direction: column; 
+        
+        /* Overlay Positioning */
+        position: absolute; 
+        top: 75px; 
+        right: 0; 
+        left: auto; /* Right alignment confirm */
+        
+        width: auto; 
+        min-width: 250px; 
+        height: auto; 
+        
+        background-color: #050A30 !important; 
+        z-index: 10001; 
+        
+        padding: 20px 0; 
+        box-shadow: -4px 4px 6px rgba(0, 0, 0, 0.4); 
+        
+        /* FIX 1: Transition add karein */
+        transition: transform 0.3s ease-in-out; 
+        /* FIX 2: Default state: Screen se bahar dhakelo */
+        transform: translateX(100%); 
+    }
+
+    /* Nav Content (Open State) */
+    .navContent.open {
+        display: flex !important; 
+        align-items: center; 
+        justify-content: flex-start; 
+        
+        /* FIX 3: Menu ko screen par laao */
+        transform: translateX(0); 
+    }
+
+    /* Links aur Buttons (Sahi hai) */
+    .navLinks,
+    .ctaButtons {
+        flex-direction: column;
+        align-items: center;
+        width: 100%; 
+        padding: 0 20px; 
+        gap: 15px;
+        margin: 10px 0;
+    }
+    
+    /* Buttons (Sahi hai) */
+    .reportBtn, .searchBtn {
+        width: 100%; 
+        max-width: 250px; 
+        justify-content: center;
+    }
+}

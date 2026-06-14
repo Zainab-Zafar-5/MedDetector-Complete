@@ -1,0 +1,370 @@
+
+.section {
+
+  padding: 80px 40px;
+
+  background: #e9eff6;
+
+  color: #1e1e1e;
+
+}
+
+
+
+.heading {
+
+  font-size: 2.5rem;
+
+  margin-bottom: 50px;
+
+  font-weight: 700;
+
+  font-family: serif;
+
+  border-bottom: 4px solid #333;
+
+  display: inline-block;
+
+  padding-bottom: 10px;
+
+}
+
+
+
+.grid {
+
+  display: grid;
+
+  grid-template-columns: repeat(4, 1fr);
+
+  gap: 48px;
+
+}
+
+
+
+/* --- CARD STYLE --- */
+
+.featureItem {
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: flex-start;
+
+  text-align: center;
+
+ 
+
+  padding: 40px 30px;
+
+  border: 1px solid;
+
+  border-radius: 20px;
+
+  background: white;
+
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+
+  transition: transform 0.3s ease;
+
+}
+
+
+
+.featureItem:hover {
+
+  transform: translateY(-8px);
+
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+
+}
+
+
+
+/* --- ICON WRAPPER (CIRCLE) --- */
+
+.iconWrapper {
+
+  width: 70px; /* SIZE ADJUSTED */
+
+  height: 70px; /* SIZE ADJUSTED */
+
+  border-radius: 50%;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  margin-bottom: 24px; /* MARGIN ADJUSTED */
+
+  color: #1e1e1e; /* ICON COLOR CHANGED TO DARK/BLACK */
+
+}
+
+
+
+.iconWrapper svg {
+
+  width: 32px;
+
+  height: 32px;
+
+}
+
+
+
+/* --- TEXT STYLING --- */
+
+.title {
+
+  margin: 0 0 12px 0;
+
+  font-size: 1.4rem;
+
+  font-weight: 700;
+
+  font-family: serif;
+
+  color: #1e1e1e; /* DARK TITLE */
+
+}
+
+
+
+.text {
+
+  margin: 0;
+
+  line-height: 1.6;
+
+  font-size: 0.95rem;
+
+  color: #555555;
+
+}
+
+
+
+/* --- COLOR VARIANTS (Icon Background/Border) --- */
+
+
+
+/* Yellow Box */
+
+.yellow { border-color: #facc15; }
+
+.yellow .iconWrapper { background-color: #fef5d1; }
+
+.yellow .title { color: #1e1e1e; } /* Title color fixed to dark */
+
+
+
+/* Red Box */
+
+.red { border-color: #ef4444; }
+
+.red .iconWrapper { background-color: #ffc5c5; }
+
+.red .title { color: #1e1e1e; } /* Title color fixed to dark */
+
+
+
+/* Blue Box */
+
+.blue { border-color: #3b82f6; }
+
+.blue .iconWrapper { background-color: #d9e7fd; }
+
+.blue .title { color: #1e1e1e; } /* Title color fixed to dark */
+
+
+
+/* Green Box */
+
+.green { border-color: #22c55e; }
+
+.green .iconWrapper { background-color: #dfffeb; }
+
+.green .title { color: #1e1e1e; } /* Title color fixed to dark */
+
+
+
+
+
+/* --- RESPONSIVE --- (No change needed here) */
+
+@media (max-width: 1100px) {
+
+  .grid {
+
+    grid-template-columns: repeat(2, 1fr);
+
+  }
+
+}
+
+
+
+@media (max-width: 600px) {
+
+  .grid {
+
+    grid-template-columns: 1fr;
+
+  }
+
+  .section {
+
+    padding: 60px 20px;
+
+  }
+
+}
+
+/* --- FEATURES SECTION: ICONS BACKGROUND COLOR FIX --- */
+
+
+
+/* Feature Card Container */
+
+.featureCard {
+
+  background-color: white; /* Light background for the card */
+
+  border-radius: 12px;
+
+  padding: 30px;
+
+  text-align: center;
+
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); /* Soft shadow */
+
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+  height: 100%; /* Make cards same height */
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: flex-start;
+
+}
+
+
+
+.featureCard:hover {
+
+  transform: translateY(-5px);
+
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+
+}
+
+
+
+/* --- ICON BACKGROUND CHANGE --- */
+
+.featureIcon {
+
+  width: 60px;
+
+  height: 60px;
+
+  border-radius: 50%; /* Circle shape */
+
+  background-color: #f0f0f0; /* Light Gray Background for the circle */
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  margin-bottom: 20px;
+
+  font-size: 2rem;
+
+  /* Icon ka color, har card ke liye alag se set karenge */
+
+}
+
+
+
+/* Individual Icon Colors (Override default) */
+
+/* Find Nearby Pharmacies (Search Icon) */
+
+.featureCard:nth-child(1) .featureIcon {
+
+    color: #beb281; /* Yellow Icon Color */
+
+}
+
+
+
+/* Notify Alert (Bell Icon) */
+
+.featureCard:nth-child(2) .featureIcon {
+
+    color: #ef4444; /* Red Icon Color */
+
+}
+
+
+
+/* Stock Update (Refresh Icon) */
+
+.featureCard:nth-child(3) .featureIcon {
+
+    color: #3b82f6; /* Blue Icon Color */
+
+}
+
+
+
+/* Check Alternatives (Layers Icon) */
+
+.featureCard:nth-child(4) .featureIcon {
+
+    color: #22c55e; /* Green Icon Color */
+
+}
+
+
+
+
+
+/* --- Other Text Styles (Agar zarurat ho) --- */
+
+.featureTitle {
+
+  font-size: 1.3rem;
+
+  font-weight: 600;
+
+  color: #1e1e1e; /* Dark text */
+
+  margin-bottom: 10px;
+
+}
+
+
+
+.featureDescription {
+
+  font-size: 0.95rem;
+
+  color: #555; /* Slightly lighter dark text */
+
+  line-height: 1.6;
+
+}

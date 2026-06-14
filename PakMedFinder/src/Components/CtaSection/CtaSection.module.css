@@ -1,0 +1,84 @@
+/* Section Background - Dark Navy */
+.section {
+  background-color: #050A30; 
+  padding: 80px 40px;
+  text-align: center;
+  color: white;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Heading */
+.heading {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  font-family: serif; 
+}
+
+/* Subtext */
+.subtext {
+  font-size: 1.15rem;
+  color: #d0d6e0;
+  margin-bottom: 2.5rem;
+  line-height: 1.6;
+}
+
+/* Button Container */
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap; /* Mobile pe wrap ho jayega */
+}
+
+/* Button Base Style */
+.button {
+  padding: 14px 30px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 200px;
+  border: 2px solid transparent; /* Border for secondary button */
+}
+
+/* Primary Button (Yellow) */
+.primaryButton {
+  background-color: #facc15; /* Bright Yellow */
+  color: #1e1e1e; /* Dark Text */
+}
+
+.primaryButton:hover {
+  background-color: #eab308;
+}
+
+/* Secondary Button (Outline/White) */
+.secondaryButton {
+  background-color: transparent;
+  color: white;
+  border-color: white;
+}
+
+.secondaryButton:hover {
+  background-color: white;
+  color: #1e1e1e;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .heading {
+    font-size: 2rem;
+  }
+  .actions {
+    flex-direction: column;
+    gap: 15px;
+  }
+  .button {
+    width: 100%;
+  }
+}

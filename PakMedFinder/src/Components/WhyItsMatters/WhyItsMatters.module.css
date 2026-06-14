@@ -1,0 +1,126 @@
+/* WhyItsMatters.module.css */
+
+/* 1. Container and Background */
+.homeContainer {
+  /* Set a dark background color or use a background image for the pattern */
+  background-color: #080b22; /* Example dark color, adjust as needed */
+  color: white; /* Ensure text is visible */
+  padding: 40px 20px;
+  /* Add padding and center content as needed */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 2. Title Section Styling */
+.titleSection {
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.titleSection h1 {
+  font-size: 2.5rem;
+}
+
+.titleSection p {
+  font-size: 1.1rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* 3. Arrows Section Styling (Vertical Stack) */
+/* WhyItsMatters.module.css */
+
+.arrowsSection {
+  display: flex;
+  flex-direction: column; 
+  align-items: center; /* Arrows ko center mein rakhega */
+  gap: 30px; 
+  width: 95%; 
+  max-width: 1000px; /* Kaafi wide for the longest arrow */
+  margin-bottom: 50px;
+}
+
+/* 4. Individual Arrow Styling */
+/* WhyItsMatters.module.css */
+
+/* WhyItsMatters.module.css */
+
+.arrow {
+  background-color: #f2c94c; 
+  color: #1a1a2e; 
+  padding: 20px 50px; 
+  text-align: left;
+  font-size: 1.5rem;
+  font-weight: bold;
+  position: relative;
+  /* Width ab individual classes se aayegi */
+  
+  /* Arrow shape */
+  clip-path: polygon(0 0, 95% 0, 100% 50%, 95% 100%, 0 100%);
+}
+/* Adjust colors for consistency if needed, though they look the same in the image */
+/* WhyItsMatters.module.css */
+
+/* Longest Arrow (Google Sheets / APIs) */
+.arrow1 {
+  width: 70%; /* Full width of the 1200px container */
+  max-width: 1000px; 
+}
+
+/* Medium Length Arrow (n8n Automation) */
+.arrow2 {
+  width: 60%; /* Thoda chhota */
+  max-width: 809px; /* 90% of 1200px */
+}
+
+/* Shortest Arrow (Notifications) */
+.arrow3 {
+  width: 50%; /* Sabse chhota */
+  max-width: 600px; /* 80% of 1200px */
+}
+
+/* 5. Features Section Layout (Two Columns) */
+.featuresSection {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Two columns */
+  gap: 30px; /* Space between features */
+  width: 90%;
+  max-width: 1000px;
+  margin-top: 30px;
+}
+
+/* 6. Individual Feature Styling */
+.feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+}
+
+.feature h3 {
+  font-size: 1.2rem;
+  margin-top: 0;
+  margin-bottom: 5px;
+}
+
+.feature p {
+  font-size: 1rem;
+  color: #ccc; /* Lighter text for the description */
+}
+
+.bullet {
+  display: block;
+  width: 10px;
+  height: 10px;
+  min-width: 10px; /* To prevent squishing */
+  min-height: 10px; /* To prevent squishing */
+  border-radius: 50%;
+  margin-top: 8px; /* Align with the top of the h3/text block */
+}
+
+/* Media Query for Responsiveness (Optional but recommended) */
+@media (max-width: 768px) {
+  .featuresSection {
+    grid-template-columns: 1fr; /* Single column on smaller screens */
+  }
+}

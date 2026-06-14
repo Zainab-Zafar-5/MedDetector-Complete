@@ -1,0 +1,22 @@
+html {
+  box-sizing: border-box; /* Good practice */
+  scroll-behavior: smooth; /* <-- Yahan zaroor ho */
+}
+/* index.css ya App.css */
+
+/* Global Fix: Ye scroll ko rokta hai jab koi element width se bahar chala jaye */
+body {
+    overflow-x: hidden; /* <-- Horizontal scroll ko rokta hai */
+    margin: 0;
+    padding: 0;
+}
+
+/* Optional: Agar koi container box-sizing mein galti kar raha ho */
+*, *::before, *::after {
+    box-sizing: border-box; /* Ensures padding/border is included in element's width */
+}
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  z-index: 1; /* Taake NavBar ke peeche rahe */
+}

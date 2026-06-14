@@ -1,0 +1,69 @@
+/* Section Container - Light Background */
+.section {
+  background-color: #e9eff6; /* Light Gray/Off-white */
+  padding: 80px 40px;
+  text-align: center;
+  color: #1e1e1e; /* Dark Text */
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Heading */
+.heading {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 50px;
+  font-family: serif;
+}
+
+/* Stats Grid */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 30px;
+}
+
+/* Individual Stat Item */
+.statItem {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Icon Styling */
+.icon {
+  color: #facc15; /* Yellow Accent Color */
+  margin-bottom: 15px;
+}
+
+/* Large Number */
+.number {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #1e1e1e;
+  margin: 0 0 5px 0;
+}
+
+/* Label (Descriptive Text) */
+.label {
+  font-size: 1rem;
+  color: #555555;
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 950px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 550px) {
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+}

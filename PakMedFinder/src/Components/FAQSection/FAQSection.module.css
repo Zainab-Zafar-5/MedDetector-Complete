@@ -1,0 +1,102 @@
+/* --- FINAL FAQ SECTION: LIGHT BACKGROUND (Fixed Text Visibility) --- */
+
+.section {
+  background-color: #e9eff6;; /* Light Gray Background */
+  padding: 80px 40px;
+  color: #1e1e1e; 
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+/* --- FAQ Badge/Heading --- */
+.faqBadge {
+  display: inline-block;
+  background: #facc15; 
+  border-radius: 50px;
+  padding: 8px 30px;
+  margin-bottom: 50px;
+  box-shadow: 0 0 15px rgba(250, 204, 21, 0.3); 
+}
+
+.headingBadge {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0;
+  color: #1e1e1e; /* Dark text */
+  letter-spacing: 0.5px;
+}
+
+/* --- Accordion Item (The Card) --- */
+.accordionItem {
+  background-color: white; /* WHITE background for item */
+  border: 1px solid #e0e0e0; 
+  border-radius: 15px; 
+  margin-bottom: 15px;
+  overflow: hidden; 
+  transition: all 0.3s ease-in-out;
+}
+
+/* Active/Open Item Styling */
+.activeItem {
+  border-color: #facc15; /* Yellow border when active */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); 
+}
+
+/* Header (The clickable button) */
+.accordionHeader {
+  width: 100%;
+  padding: 18px 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: #1e1e1e; /* Dark text for the header */
+}
+
+.question {
+  flex-grow: 1;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 15px;
+  color: #1e1e1e; /* Dark question text */
+}
+
+/* Plus/Minus Icon */
+.toggleIconPlusMinus {
+  color: #facc15; /* Bright Yellow color */
+}
+
+/* Chevron Right Icon */
+.toggleIconChevron {
+  color: #888; /* Subtle Grey */
+}
+
+/* Answer Content */
+.accordionContent {
+  /* ... (color properties are correct from previous step) ... */
+  
+  max-height: 0; /* Hidden by default */
+  overflow: hidden;
+  /* Smooth transition effect */
+  transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out; 
+}
+
+.accordionContent.open {
+  /* Increase max-height to ensure any answer fits */
+  max-height: 300px; /* Changed from 200px to 300px for safety */
+  padding: 15px 25px 25px 25px; 
+}
+
+.accordionContent p {
+  color: #333; /* Dark answer text */
+  font-size: 0.95rem;
+  line-height: 1.6;
+  font-weight: 400;
+}
