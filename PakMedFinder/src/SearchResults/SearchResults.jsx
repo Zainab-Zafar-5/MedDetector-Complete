@@ -258,38 +258,56 @@ const OrderConfirmationModal = ({ data, onClose }) => {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      zIndex: 999999 // ✅ Highest z-index so it always renders above the
-                      // verification modal (9999) and OrderFormModal (99999)
+      zIndex: 999999, // ✅ Highest z-index so it always renders above the
+                       // verification modal (9999) and OrderFormModal (99999)
+      padding: "16px",
+      overflow: "auto"
     }}>
-      <div style={{
+      {/* Print-only styles: hide everything except the receipt when printing */}
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          #order-receipt, #order-receipt * { visibility: visible; }
+          #order-receipt {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            max-height: none !important;
+            box-shadow: none !important;
+          }
+          .no-print { display: none !important; }
+        }
+      `}</style>
+
+      <div id="order-receipt" style={{
         background: "white",
         borderRadius: "16px",
-        padding: "50px 40px",
-        maxWidth: "500px",
-        width: "90%",
-        textAlign: "center"
+        padding: "24px 28px",
+        maxWidth: "480px",
+        width: "95%",
+        maxHeight: "95vh",
+        overflowY: "auto",
+        textAlign: "center",
+        margin: "auto"
       }}>
-        {/* Success Icon */}
-        <div style={{
-          fontSize: "60px",
-          marginBottom: "20px"
-        }}>
-          ✅
+        {/* Success Icon + Heading (compact, side by side) */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "4px" }}>
+          <span style={{ fontSize: "28px" }}>✅</span>
+          <h2 style={{
+            fontSize: "22px",
+            fontWeight: "800",
+            color: "#0f172a",
+            margin: 0
+          }}>
+            Order Confirmed!
+          </h2>
         </div>
-
-        <h2 style={{
-          fontSize: "28px",
-          fontWeight: "800",
-          color: "#0f172a",
-          margin: "0 0 8px"
-        }}>
-          Order Confirmed!
-        </h2>
 
         <p style={{
           color: "#64748b",
-          margin: "0 0 30px",
-          fontSize: "15px"
+          margin: "0 0 14px",
+          fontSize: "13px"
         }}>
           Your order has been successfully placed
         </p>
@@ -299,105 +317,150 @@ const OrderConfirmationModal = ({ data, onClose }) => {
           background: "#f0fdf4",
           border: "2px solid #10b981",
           borderRadius: "12px",
-          padding: "25px",
-          marginBottom: "30px"
+          padding: "14px 16px",
+          marginBottom: "14px"
         }}>
-          {/* Order Number - LARGE AND PROMINENT */}
-          <div style={{ marginBottom: "20px" }}>
-            <label style={{ fontSize: "12px", color: "#64748b", fontWeight: "600" }}>
+          {/* Order Number - prominent but compact */}
+          <div style={{ marginBottom: "10px" }}>
+            <label style={{ fontSize: "11px", color: "#64748b", fontWeight: "600" }}>
               ORDER NUMBER
             </label>
             <div style={{
-              fontSize: "26px",
+              fontSize: "19px",
               fontWeight: "800",
               color: "#10b981",
-              marginTop: "8px",
+              marginTop: "2px",
               fontFamily: "monospace",
-              letterSpacing: "2px"
+              letterSpacing: "1px"
             }}>
               #{data.orderNumber}
             </div>
+            <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>
+              {data.orderDate}
+            </div>
           </div>
 
-          {/* Order Information Grid */}
+          {/* Order Information Grid - compact 2-3 column layout */}
           <div style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "15px",
-            fontSize: "13px",
+            gridTemplateColumns: "1fr 1fr 1fr",
+            gap: "8px 12px",
+            fontSize: "12px",
             borderTop: "1px solid #d1fae5",
-            paddingTop: "20px"
+            paddingTop: "10px",
+            textAlign: "left"
           }}>
             <div>
-              <label style={{ color: "#64748b", fontWeight: "600" }}>Patient Name</label>
-              <div style={{ marginTop: "4px", fontWeight: "600" }}>{data.patientName}</div>
+              <label style={{ color: "#64748b", fontWeight: "600", fontSize: "10px" }}>PATIENT NAME</label>
+              <div style={{ marginTop: "2px", fontWeight: "600" }}>{data.patientName}</div>
             </div>
             <div>
-              <label style={{ color: "#64748b", fontWeight: "600" }}>Phone</label>
-              <div style={{ marginTop: "4px", fontWeight: "600" }}>{data.patientPhone}</div>
+              <label style={{ color: "#64748b", fontWeight: "600", fontSize: "10px" }}>PHONE</label>
+              <div style={{ marginTop: "2px", fontWeight: "600" }}>{data.patientPhone}</div>
             </div>
+            <div>
+              <label style={{ color: "#64748b", fontWeight: "600", fontSize: "10px" }}>CITY</label>
+              <div style={{ marginTop: "2px", fontWeight: "600" }}>{data.patientLocation || "N/A"}</div>
+            </div>
+
             <div style={{ gridColumn: "1 / -1" }}>
-              <label style={{ color: "#64748b", fontWeight: "600" }}>Medicine</label>
-              <div style={{ marginTop: "4px", fontWeight: "600", color: "#2563eb" }}>
-                {data.medicineName}
+              <label style={{ color: "#64748b", fontWeight: "600", fontSize: "10px" }}>DELIVERY ADDRESS</label>
+              <div style={{ marginTop: "2px", fontWeight: "600" }}>{data.deliveryAddress || "N/A"}</div>
+            </div>
+
+            {data.specialNotes && data.specialNotes.trim() !== "" && (
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label style={{ color: "#64748b", fontWeight: "600", fontSize: "10px" }}>SPECIAL NOTES</label>
+                <div style={{ marginTop: "2px", fontWeight: "600" }}>{data.specialNotes}</div>
+              </div>
+            )}
+
+            <div style={{ gridColumn: "1 / -1", borderTop: "1px solid #d1fae5", paddingTop: "8px" }}>
+              <label style={{ color: "#64748b", fontWeight: "600", fontSize: "10px" }}>MEDICINE</label>
+              <div style={{ marginTop: "2px", fontWeight: "600", color: "#2563eb" }}>
+                {data.medicineName} {data.medicineStrength && data.medicineStrength !== "N/A" ? `(${data.medicineStrength})` : ""}
               </div>
             </div>
-            <div style={{ gridColumn: "1 / -1" }}>
-              <label style={{ color: "#64748b", fontWeight: "600" }}>Pharmacy</label>
-              <div style={{ marginTop: "4px", fontWeight: "600" }}>{data.pharmacyName}</div>
+            <div>
+              <label style={{ color: "#64748b", fontWeight: "600", fontSize: "10px" }}>QTY</label>
+              <div style={{ marginTop: "2px", fontWeight: "600" }}>{data.quantity || 1}</div>
             </div>
             <div>
-              <label style={{ color: "#64748b", fontWeight: "600" }}>Total Price</label>
-              <div style={{ marginTop: "4px", fontWeight: "700", color: "#ef4444" }}>
+              <label style={{ color: "#64748b", fontWeight: "600", fontSize: "10px" }}>CATEGORY</label>
+              <div style={{ marginTop: "2px", fontWeight: "600" }}>{data.medicineCategory || "General"}</div>
+            </div>
+            <div>
+              <label style={{ color: "#64748b", fontWeight: "600", fontSize: "10px" }}>TOTAL</label>
+              <div style={{ marginTop: "2px", fontWeight: "700", color: "#ef4444" }}>
                 Rs. {data.totalPrice}
               </div>
+            </div>
+
+            <div style={{ gridColumn: "1 / -1" }}>
+              <label style={{ color: "#64748b", fontWeight: "600", fontSize: "10px" }}>PHARMACY</label>
+              <div style={{ marginTop: "2px", fontWeight: "600" }}>{data.pharmacyName}</div>
             </div>
           </div>
         </div>
 
-        {/* Info Message */}
+        {/* Info Message - compact, combined with email confirmation */}
         <div style={{
           background: "#eff6ff",
           border: "1px solid #e0f2fe",
           borderRadius: "8px",
-          padding: "15px",
-          fontSize: "13px",
+          padding: "10px 12px",
+          fontSize: "11.5px",
           color: "#0c4a6e",
-          lineHeight: "1.6",
-          marginBottom: "25px"
+          lineHeight: "1.5",
+          marginBottom: "14px",
+          textAlign: "left"
         }}>
-          <strong>📋 Next Steps:</strong><br/>
-          Your prescription and order details have been sent to the pharmacy. They will review and contact you within 2-4 hours.
+          <strong>📋 Next Steps:</strong> Pharmacy will review and contact you within 2-4 hours.
+          <br/>✓ Confirmation sent to <strong>{data.patientEmail}</strong>
         </div>
 
-        {/* Email Confirmation */}
-        <div style={{
-          fontSize: "12px",
-          color: "#64748b",
-          marginBottom: "20px"
-        }}>
-          ✓ Confirmation email sent to <strong>{data.patientEmail}</strong>
-        </div>
+        {/* Action Buttons */}
+        <div className="no-print" style={{ display: "flex", gap: "10px" }}>
+          <button
+            onClick={() => window.print()}
+            style={{
+              flex: 1,
+              padding: "11px 16px",
+              background: "#fff",
+              color: "#0f172a",
+              border: "2px solid #cbd5e1",
+              borderRadius: "8px",
+              fontWeight: "700",
+              fontSize: "13px",
+              cursor: "pointer",
+              transition: "background 0.2s"
+            }}
+            onMouseEnter={e => e.target.style.background = "#f1f5f9"}
+            onMouseLeave={e => e.target.style.background = "#fff"}
+          >
+            🖨️ Print / Save as PDF
+          </button>
 
-        <button
-          onClick={onClose}
-          style={{
-            width: "100%",
-            padding: "14px 20px",
-            background: "#10b981",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
-            fontWeight: "700",
-            fontSize: "15px",
-            cursor: "pointer",
-            transition: "background 0.2s"
-          }}
-          onMouseEnter={e => e.target.style.background = "#059669"}
-          onMouseLeave={e => e.target.style.background = "#10b981"}
-        >
-          Back to Search
-        </button>
+          <button
+            onClick={onClose}
+            style={{
+              flex: 1,
+              padding: "11px 16px",
+              background: "#10b981",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              fontWeight: "700",
+              fontSize: "13px",
+              cursor: "pointer",
+              transition: "background 0.2s"
+            }}
+            onMouseEnter={e => e.target.style.background = "#059669"}
+            onMouseLeave={e => e.target.style.background = "#10b981"}
+          >
+            Back to Search
+          </button>
+        </div>
       </div>
     </div>
   );

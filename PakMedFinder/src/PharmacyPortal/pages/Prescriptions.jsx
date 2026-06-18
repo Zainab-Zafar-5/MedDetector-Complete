@@ -48,7 +48,7 @@ const ImageModal = ({ image, onClose }) => {
 };
 
 // ── DETAILS MODAL ────────────────────────────────────────────────────────────
-const DetailsModal = ({ order, onClose, onApprove, approving, onViewPrescription }) => {
+const DetailsModal = ({ order, onClose, onApprove, onReject, approving, rejecting, onViewPrescription }) => {
   if (!order) return null;
   return (
     <div style={{
@@ -152,10 +152,10 @@ const DetailsModal = ({ order, onClose, onApprove, approving, onViewPrescription
             <span style={{
               display: "inline-block", padding: "8px 16px", borderRadius: "6px",
               fontWeight: "600", fontSize: "13px",
-              background: order.status === "Approved" ? "#d1fae5" : "#fef3c7",
-              color:      order.status === "Approved" ? "#047857"  : "#b45309"
+              background: order.status === "Approved" ? "#d1fae5" : order.status === "Rejected" ? "#fee2e2" : "#fef3c7",
+              color:      order.status === "Approved" ? "#047857" : order.status === "Rejected" ? "#b91c1c" : "#b45309"
             }}>
-              {order.status === "Approved" ? "✅ Approved" : "⏳ Pending Review"}
+              {order.status === "Approved" ? "✅ Approved — sent to Requests" : order.status === "Rejected" ? "❌ Rejected" : "⏳ Pending Review"}
             </span>
           </div>
         </div>
@@ -175,23 +175,43 @@ const DetailsModal = ({ order, onClose, onApprove, approving, onViewPrescription
           </button>
 
           {order.status === "Pending" && (
-            <button
-              onClick={() => onApprove(order._id, order.orderNumber)}
-              disabled={approving === order._id}
-              style={{
-                flex: 1, minWidth: "150px", padding: "12px 20px",
-                background: approving === order._id ? "#d1d5db" : "#10b981",
-                color: "white", border: "none", borderRadius: "8px",
-                fontWeight: "600", cursor: approving === order._id ? "not-allowed" : "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: "8px"
-              }}
-            >
-              {approving === order._id
-                ? <><Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> Approving...</>
-                : <><CheckCircle size={16} /> Approve Order</>
-              }
-            </button>
+            <>
+              <button
+                onClick={() => onApprove(order._id, order.orderNumber)}
+                disabled={approving === order._id || rejecting === order._id}
+                style={{
+                  flex: 1, minWidth: "150px", padding: "12px 20px",
+                  background: approving === order._id ? "#d1d5db" : "#10b981",
+                  color: "white", border: "none", borderRadius: "8px",
+                  fontWeight: "600", cursor: approving === order._id ? "not-allowed" : "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: "8px"
+                }}
+              >
+                {approving === order._id
+                  ? <><Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> Approving...</>
+                  : <><CheckCircle size={16} /> Approve Order</>
+                }
+              </button>
+
+              <button
+                onClick={() => onReject(order._id, order.orderNumber)}
+                disabled={approving === order._id || rejecting === order._id}
+                style={{
+                  flex: 1, minWidth: "150px", padding: "12px 20px",
+                  background: rejecting === order._id ? "#d1d5db" : "#ef4444",
+                  color: "white", border: "none", borderRadius: "8px",
+                  fontWeight: "600", cursor: rejecting === order._id ? "not-allowed" : "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: "8px"
+                }}
+              >
+                {rejecting === order._id
+                  ? <><Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> Rejecting...</>
+                  : <><X size={16} /> Reject Order</>
+                }
+              </button>
+            </>
           )}
+
 
           <button
             onClick={onClose}
@@ -219,6 +239,7 @@ const Prescriptions = () => {
   const [showImageModal,   setShowImageModal]   = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [approving,        setApproving]        = useState(null);
+  const [rejecting,        setRejecting]        = useState(null);
 
   // Fetch orders
   useEffect(() => {
@@ -249,6 +270,7 @@ const Prescriptions = () => {
   const filteredOrders = orders.filter(order => {
     if (filter === "pending")  return order.status === "Pending";
     if (filter === "approved") return order.status === "Approved";
+    if (filter === "rejected") return order.status === "Rejected";
     return true;
   });
 
@@ -269,7 +291,7 @@ const Prescriptions = () => {
         setSelectedOrder(prev =>
           prev && prev._id === orderId ? { ...prev, status: "Approved", approvedAt: new Date() } : prev
         );
-        alert("✅ Prescription approved successfully!");
+        alert(`✅ Prescription approved! Order ${orderNumber} has moved to the Requests page for fulfillment.`);
       } else {
         alert("❌ Error: " + (data.message || "Failed to approve"));
       }
@@ -277,6 +299,38 @@ const Prescriptions = () => {
       alert("❌ Network error: " + err.message);
     } finally {
       setApproving(null);
+    }
+  }, []);
+
+  // ✅ Reject a prescription/order. Rejected orders stay out of the
+  // Requests fulfillment pipeline (only "Approved" orders show there).
+  const handleReject = useCallback(async (orderId, orderNumber) => {
+    if (!orderId) { alert("❌ Invalid order ID"); return; }
+    if (!window.confirm(`Reject order ${orderNumber}? The patient's prescription will be marked as rejected.`)) return;
+
+    setRejecting(orderId);
+    try {
+      const res  = await fetch(`http://localhost:5000/api/orders/${orderId}`, {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ status: "Rejected" })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setOrders(prev => prev.map(o =>
+          o._id === orderId ? { ...o, status: "Rejected" } : o
+        ));
+        setSelectedOrder(prev =>
+          prev && prev._id === orderId ? { ...prev, status: "Rejected" } : prev
+        );
+        alert(`❌ Order ${orderNumber} has been rejected.`);
+      } else {
+        alert("❌ Error: " + (data.message || "Failed to reject"));
+      }
+    } catch (err) {
+      alert("❌ Network error: " + err.message);
+    } finally {
+      setRejecting(null);
     }
   }, []);
 
@@ -310,13 +364,14 @@ const Prescriptions = () => {
 
           {/* Stats */}
           <div style={{
-            display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
+            display: "grid", gridTemplateColumns: "repeat(4, 1fr)",
             gap: "20px", marginBottom: "28px"
           }}>
             {[
               { label: "TOTAL",    value: orders.length,                                      color: "#2563eb" },
               { label: "PENDING",  value: orders.filter(o => o.status === "Pending").length,  color: "#f59e0b" },
               { label: "APPROVED", value: orders.filter(o => o.status === "Approved").length, color: "#10b981" },
+              { label: "REJECTED", value: orders.filter(o => o.status === "Rejected").length, color: "#ef4444" },
             ].map((s, i) => (
               <div key={i} className="card" style={{
                 background: "white", padding: "22px", borderRadius: "15px", border: "1px solid #eee"
@@ -333,6 +388,7 @@ const Prescriptions = () => {
               { value: "all",      label: "All Orders" },
               { value: "pending",  label: "Pending"    },
               { value: "approved", label: "Approved"   },
+              { value: "rejected", label: "Rejected"   },
             ].map(f => (
               <button
                 key={f.value}
@@ -396,10 +452,10 @@ const Prescriptions = () => {
                           display: "inline-block", padding: "5px 12px",
                           borderRadius: "6px", fontSize: "12px", fontWeight: "700",
                           whiteSpace: "nowrap",
-                          background: order.status === "Approved" ? "#d1fae5" : "#fef3c7",
-                          color:      order.status === "Approved" ? "#047857"  : "#92400e"
+                          background: order.status === "Approved" ? "#d1fae5" : order.status === "Rejected" ? "#fee2e2" : "#fef3c7",
+                          color:      order.status === "Approved" ? "#047857" : order.status === "Rejected" ? "#b91c1c" : "#92400e"
                         }}>
-                          {order.status === "Approved" ? "✅ Approved" : "⏳ Pending"}
+                          {order.status === "Approved" ? "✅ Approved" : order.status === "Rejected" ? "❌ Rejected" : "⏳ Pending"}
                         </span>
                       </td>
                       <td style={{ padding: "14px 16px" }}>
@@ -440,7 +496,9 @@ const Prescriptions = () => {
           order={selectedOrder}
           onClose={() => { setShowDetailsModal(false); setSelectedOrder(null); }}
           onApprove={handleApprove}
+          onReject={handleReject}
           approving={approving}
+          rejecting={rejecting}
           onViewPrescription={handleViewPrescription}
         />
       )}

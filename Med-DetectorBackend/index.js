@@ -87,32 +87,7 @@ const partnerSchema = new mongoose.Schema({
 
 const Partner = mongoose.models.Partner || mongoose.model('Partner', partnerSchema);
 
-// Add this to index.js
-app.post('/api/register-partner', async (req, res) => {
-    try {
-        const { pharmacyName, licenseNo, ownerName, email, password, phone, city, address } = req.body;
-        
-        // Hash the password before saving
-        const hashedPassword = await bcrypt.hash(password, 10);
-        
-        const newPartner = new Partner({
-            pharmacyName,
-            licenseNo,
-            ownerName,
-            email,
-            password: hashedPassword,
-            phone,
-            city,
-            address
-        });
 
-        await newPartner.save();
-        res.status(201).json({ success: true, message: "Registration successful" });
-    } catch (error) {
-        console.error("Registration error:", error);
-        res.status(500).json({ success: false, message: "Registration failed: " + error.message });
-    }
-});
 
 
 cloudinary.config({ 
@@ -566,18 +541,27 @@ app.post('/api/orders', async (req, res) => {
             patientName, patientEmail, patientPhone, patientLocation,
             pharmacyName, medicineName, medicinePrice, medicineStrength,
             medicineCategory, prescriptionUrl, quantity, totalPrice,
-            deliveryAddress, specialNotes, userId
+            deliveryAddress, specialNotes, userId,
+            isManualEntry // ✅ true when added via Requests page "Add Manual Order"
+                          // (walk-in / phone orders) — skips prescription
+                          // verification and goes straight to the fulfillment
+                          // pipeline (deliveryStatus: 'Pending').
         } = req.body;
 
-        // ✅ VALIDATE ALL REQUIRED FIELDS
+        // ✅ VALIDATE REQUIRED FIELDS
+        // Manual entries (walk-in orders added by the pharmacy) don't have a
+        // patient-uploaded prescription, so prescriptionUrl isn't required
+        // for those.
         const requiredFields = [
             { name: 'patientName', value: patientName },
             { name: 'patientEmail', value: patientEmail },
             { name: 'patientPhone', value: patientPhone },
             { name: 'pharmacyName', value: pharmacyName },
             { name: 'medicineName', value: medicineName },
-            { name: 'prescriptionUrl', value: prescriptionUrl }
         ];
+        if (!isManualEntry) {
+            requiredFields.push({ name: 'prescriptionUrl', value: prescriptionUrl });
+        }
 
         const missingFields = requiredFields
             .filter(field => !field.value)
@@ -612,13 +596,16 @@ app.post('/api/orders', async (req, res) => {
             medicinePrice: Number(medicinePrice) || 0,
             medicineStrength: medicineStrength || "N/A",
             medicineCategory: medicineCategory || "General",
-            prescriptionUrl: prescriptionUrl.trim(),
+            prescriptionUrl: prescriptionUrl ? prescriptionUrl.trim() : "Not Required (Manual Entry)",
             quantity: Number(quantity) || 1,
             totalPrice: Number(totalPrice) || 0,
-            deliveryAddress: deliveryAddress.trim() || "Not specified",
+            deliveryAddress: deliveryAddress ? deliveryAddress.trim() : "Not specified",
             specialNotes: specialNotes || "",
             userId: userId || "guest_user",
-            status: 'Pending'
+            // ✅ Manual entries skip prescription verification entirely and
+            // go straight into the Requests/fulfillment pipeline.
+            status: isManualEntry ? 'Approved' : 'Pending',
+            deliveryStatus: 'Pending'
         });
 
         await newOrder.save();
@@ -703,9 +690,9 @@ app.get('/api/orders', async (req, res) => {
 app.patch('/api/orders/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, deliveryStatus } = req.body;
 
-    console.log(`📝 Updating order ${id} to status: ${status}`);
+    console.log(`📝 Updating order ${id} -> status: ${status}, deliveryStatus: ${deliveryStatus}`);
 
     // Validate MongoDB ObjectId
     const mongoose = require('mongoose');
@@ -713,14 +700,29 @@ app.patch('/api/orders/:id', async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid order ID" });
     }
 
+    // ✅ Build update object dynamically — only touch the fields that were sent.
+    // This keeps prescription-verification status (Prescriptions page) and
+    // delivery/fulfillment status (Requests page) completely independent.
+    const updateFields = {};
+
+    if (status !== undefined) {
+      updateFields.status = status;
+      updateFields.approvedAt = new Date();
+      updateFields.approvedBy = "Pharmacy Admin";
+    }
+
+    if (deliveryStatus !== undefined) {
+      updateFields.deliveryStatus = deliveryStatus;
+    }
+
+    if (Object.keys(updateFields).length === 0) {
+      return res.status(400).json({ success: false, message: "No valid fields to update (expected 'status' or 'deliveryStatus')" });
+    }
+
     // Update order with new status
     const updatedOrder = await Order.findByIdAndUpdate(
       id,
-      {
-        status: status,
-        approvedAt: new Date(),
-        approvedBy: "Pharmacy Admin"
-      },
+      updateFields,
       { new: true, runValidators: true }
     );
 
@@ -732,7 +734,7 @@ app.patch('/api/orders/:id', async (req, res) => {
 
     res.json({
       success: true,
-      message: `Order ${status} successfully`,
+      message: `Order updated successfully`,
       data: updatedOrder,
       orderNumber: updatedOrder.orderNumber
     });
@@ -742,6 +744,30 @@ app.patch('/api/orders/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error updating order: " + err.message
+    });
+  }
+});
+
+// ✅ DELETE an order (used by the Requests page "🗑️" button)
+app.delete('/api/orders/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: "Invalid order ID" });
+    }
+
+    const deleted = await Order.findByIdAndDelete(id);
+    if (!deleted) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    res.json({ success: true, message: "Order deleted successfully" });
+  } catch (err) {
+    console.error("❌ Error deleting order:", err);
+    res.status(500).json({
+      success: false,
+      message: "Error deleting order: " + err.message
     });
   }
 });

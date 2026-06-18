@@ -85,7 +85,8 @@ const orderSchema = new mongoose.Schema({
         default: ""
     },
  
-    // ✅ ORDER STATUS
+    // ✅ PRESCRIPTION VERIFICATION STATUS
+    // Controlled by the Prescriptions page (Approve / Reject buttons).
     status: { 
         type: String, 
         default: 'Pending',
@@ -97,6 +98,17 @@ const orderSchema = new mongoose.Schema({
     },
     approvedBy: {
         type: String
+    },
+
+    // ✅ DELIVERY / FULFILLMENT STATUS
+    // Only relevant once the prescription is "Approved". Controlled by the
+    // Requests page as the pharmacy processes the order
+    // (Pending -> Accepted -> Ready -> Delivered).
+    deliveryStatus: {
+        type: String,
+        default: 'Pending',
+        enum: ['Pending', 'Accepted', 'Ready', 'Delivered'],
+        index: true
     },
  
     // ✅ METADATA
