@@ -66,7 +66,7 @@ const Dashboard = () => {
   const showAll    = () => { if (allMedicines.length > 0) { const s = [...allMedicines].sort((a,b) => (a.stock || 0) - (b.stock || 0)); setSelectedMeds(s.slice(0, 10)); setChartSearch(""); } };
 
   if (loading) return (
-    <div style={{ display:"flex" }}><Sidebar /><div className="main-content"><Navbar /><div className="page-content" style={{textAlign:"center", marginTop:"20%"}}>⏳ Fetching Full Inventory Records...</div></div></div>
+    <div style={{ display:"flex", width:"100%", maxWidth:"100vw", overflowX:"hidden" }}><Sidebar /><div className="main-content" style={{ flex:"1 1 0%", minWidth:0, width:"100%" }}><Navbar /><div className="page-content" style={{textAlign:"center", marginTop:"20%", width:"100%", boxSizing:"border-box"}}>⏳ Fetching Full Inventory Records...</div></div></div>
   );
 
   // Destructuring metrics safety fields
@@ -76,11 +76,11 @@ const Dashboard = () => {
   const chartColors = ["#2563eb","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#ec4899","#14b8a6","#f97316","#84cc16"];
 
   return (
-    <div style={{ display:"flex" }}>
+    <div style={{ display:"flex", width:"100%", maxWidth:"100vw", overflowX:"hidden" }}>
       <Sidebar />
-      <div className="main-content">
+      <div className="main-content" style={{ flex:"1 1 0%", minWidth:0, width:"100%" }}>
         <Navbar />
-        <div className="page-content">
+        <div className="page-content" style={{ width:"100%", maxWidth:"100%", boxSizing:"border-box" }}>
 
           {/* 1. UPPER SECTION: DYNAMIC LOW STOCK INVENTORY TABLE */}
           {lowStockList?.length > 0 && (
@@ -163,7 +163,7 @@ const Dashboard = () => {
                   <button onClick={clearChart} style={{ padding:"6px 12px", borderRadius:"8px", border:"1px solid #fecaca", background:"#fff5f5", cursor:"pointer", fontSize:"12px", color:"red" }}>Clear Chart</button>
                 </div>
               </div>
-              <div style={{ display:"flex", alignItems:"flex-end", gap:"12px", height:"180px", borderBottom:"2px solid #f1f5f9" }}>
+              <div style={{ display:"flex", alignItems:"flex-end", gap:"12px", height:"180px", borderBottom:"2px solid #f1f5f9", overflowX:"auto", minWidth:0 }}>
                 {currentMeds.map((m,i) => (
                   <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center" }}>
                     <div style={{ width:"100%", height:`${((m.stock||0)/maxStock)*140}px`, background:chartColors[i%10], borderRadius:"4px 4px 0 0" }} />

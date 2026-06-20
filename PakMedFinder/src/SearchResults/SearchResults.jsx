@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search as SearchIcon, MapPin, Phone, Loader2, Pill, Info, X, Mail, ShieldCheck, Upload, Clock } from 'lucide-react';
 import styles from './SearchResults.module.css';
 import Alternative from './Alternative';
@@ -21,6 +21,8 @@ const SearchComponent = () => {
 const [orderConfirmation, setOrderConfirmation] = useState(null);
 const [showConfirmation, setShowConfirmation] = useState(false);
 const [uploadProgress, setUploadProgress] = useState(0);
+const [highlightedMed, setHighlightedMed] = useState(null);
+const cardRefs = useRef({});
 
   // ✅ PERFORMANCE FIX: Compress/resize image in the browser before upload.
   // Phone-camera prescription photos are often 3-8MB at 3000x4000px.
@@ -544,8 +546,20 @@ const OrderConfirmationModal = ({ data, onClose }) => {
             results.map((med) => {
               const isOutOfStock = med.stock <= 0 || med.quantity <= 0 || med.status === 'Short';
 
+              const isHighlighted = highlightedMed && med.name.toLowerCase().includes(highlightedMed.toLowerCase());
+
               return (
-                <div key={med._id} className={styles.medicationCard}>
+                <div
+                  key={med._id}
+                  id={`med-${med.name}`}
+                  ref={el => { if (el) cardRefs.current[med.name] = el; }}
+                  className={styles.medicationCard}
+                  style={isHighlighted ? {
+                    outline: '2.5px solid #3b82f6',
+                    boxShadow: '0 0 0 6px rgba(59,130,246,0.15)',
+                    transition: 'all 0.3s ease',
+                  } : {}}
+                >
                   <div className={styles.cardHeader}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                       <span className={styles.badgePharmacy}>
@@ -574,8 +588,8 @@ const OrderConfirmationModal = ({ data, onClose }) => {
 
                   <div className={styles.cardBody}>
                     <div className={styles.infoItem}>
-                      <MapPin size={14} /> 
-                      {typeof med.location === 'object' ? (med.address || "Lahore, Punjab") : med.location}
+                     <MapPin size={14} /> 
+                     {[med.address, med.location].filter(Boolean).join(", ") || "Location not available"}
                     </div>
                     <div className={styles.priceContainer}>
                       <span className={styles.priceLabel}>Estimated Price:</span>
@@ -695,6 +709,19 @@ const OrderConfirmationModal = ({ data, onClose }) => {
           medName={selectedMedName}
           genericName={selectedGenericName}
           onClose={() => setShowAltModal(false)}
+          onSelectAlternative={(altName) => {
+            setQuery(altName);
+            setHighlightedMed(altName);
+            // Scroll after results load
+            setTimeout(() => {
+              const keys = Object.keys(cardRefs.current);
+              const matchKey = keys.find(k => k.toLowerCase().includes(altName.toLowerCase()));
+              if (matchKey && cardRefs.current[matchKey]) {
+                cardRefs.current[matchKey].scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+              setTimeout(() => setHighlightedMed(null), 2500);
+            }, 900);
+          }}
         />
       )}
 

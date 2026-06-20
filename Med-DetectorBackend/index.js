@@ -57,8 +57,17 @@ const medicineSchema = new mongoose.Schema({
     batchNumber: { type: String, default: "" },  
     expiryDate: { type: Date, required: true },   
     pharmacyName: { type: String, required: true },
-    licenseNo: { type: String, required: true }
+    licenseNo: { type: String, required: true },
+    location: { type: String, default: "" },
+    category: { type: String, default: "General" },
+    dosageForm: { type: String, default: "" },
+    indication: { type: String, default: "" },
+    classification: { type: String, default: "" },
+    address: { type: String, default: "" },
+    lat: { type: Number },
+    lng: { type: Number }
 }, { timestamps: true });
+
 
 medicineSchema.index({ name: 'text', genericName: 'text' });
 const Medicine = mongoose.models.Medicine || mongoose.model('Medicine', medicineSchema);
@@ -86,7 +95,21 @@ const partnerSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const Partner = mongoose.models.Partner || mongoose.model('Partner', partnerSchema);
+// ✅ RESERVATION SCHEMA
+const reservationSchema = new mongoose.Schema({
+    pharmacyName: { type: String, required: true, index: true },
+    name:     { type: String, required: true },
+    email:    { type: String },
+    phone:    { type: String },
+    location: { type: String },
+    medicine: { type: String, required: true },
+    quantity: { type: Number, default: 1 },
+    date:     { type: String },
+    notes:    { type: String },
+    status:   { type: String, default: 'upcoming', enum: ['upcoming', 'completed', 'cancelled'] }
+}, { timestamps: true });
 
+const Reservation = mongoose.models.Reservation || mongoose.model('Reservation', reservationSchema);
 
 
 
@@ -149,13 +172,23 @@ app.post('/api/medicines/bulk-import', authenticateToken, uploadCSV.single('file
                         name: rawName.trim(),
                         genericName: (row.genericName || row.generic || "General Clinical Formula").trim(), 
                         strength: row.strength || "—",
-                        price: Number(row.price || row.Price) || 120, 
-                        stock: Number(row.stock || row.Stock) || 100, 
+                        price: (() => {
+                            const rawPrice = row.price ?? row.Price ?? row['Price (PKR)'] ?? row.MRP ?? row.mrp ?? row['Unit Price'] ?? row.cost ?? row.Cost;
+                            const parsedPrice = parseFloat(rawPrice);
+                            return Number.isFinite(parsedPrice) ? parsedPrice : Math.floor(150 + Math.random() * 1050);
+                        })(),
+                        stock: (() => {
+                            const rawStock = row.stock ?? row.Stock ?? row.Quantity ?? row.quantity ?? row.Qty ?? row.qty;
+                            const parsedStock = parseInt(rawStock, 10);
+                            return Number.isFinite(parsedStock) ? parsedStock : Math.floor(10 + Math.random() * 90);
+                        })(),
                         company: (row.company || "Generic Laboratories").trim(),
                         batchNumber: row.batchNumber || "BT-" + Math.floor(1000 + Math.random() * 9000),
                         expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), 
                         pharmacyName: req.user.name,
                         licenseNo: req.user.licenseNo, 
+                        location: row.location || row.city || req.user.city || "",
+                        address: row.address || req.user.address || "",
                         status: 'Available'
                     });
                 }
@@ -296,7 +329,13 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
 // ==========================================
 app.post('/api/medicines', authenticateToken, async (req, res) => {
     try {
-        const secureProductBody = { ...req.body, pharmacyName: req.user.name, licenseNo: req.user.licenseNo };
+        const secureProductBody = { 
+            ...req.body, 
+            pharmacyName: req.user.name, 
+            licenseNo: req.user.licenseNo,
+            location: req.body.location || req.user.city || "",
+            address: req.body.address || req.user.address || ""
+        };
         const newMed = new Medicine(secureProductBody);
         await newMed.save();
         res.json({ success: true, message: "Product committed successfully." });
@@ -447,13 +486,15 @@ app.post('/api/login', async (req, res) => {
             });
         }
 
-        // Map operational dynamic identities
+      // Map operational dynamic identities
         const dynamicName = finalRole === "ADMIN" ? (targetUser.name || "System Admin HQ") : (targetUser.pharmacyName || "Test Pharma");
         const dynamicLicense = finalRole === "ADMIN" ? "HQ_MASTER" : (targetUser.licenseNo || "N/A");
+        const dynamicCity = finalRole === "ADMIN" ? "" : (targetUser.city || "");
+        const dynamicAddress = finalRole === "ADMIN" ? "" : (targetUser.address || "");
 
  // 5️⃣ SIGN SECURE PAYLOAD TOKEN (Completion)
         const token = jwt.sign(
-            { id: targetUser._id, role: finalRole, name: dynamicName, licenseNo: dynamicLicense },
+            { id: targetUser._id, role: finalRole, name: dynamicName, licenseNo: dynamicLicense, city: dynamicCity, address: dynamicAddress },
             'MED_DETECTOR_SECRET_KEY_2026',
             { expiresIn: '1d' }
         );
@@ -480,6 +521,36 @@ app.post('/api/login', async (req, res) => {
 // ==========================================
 // 🔍 MODULE F: PUBLIC System ROUTING INTERFACES
 // ==========================================
+
+app.post('/api/register-partner', async (req, res) => {
+    try {
+        const { pharmacyName, licenseNo, posSystem, ownerName, email, password, phone, city, address } = req.body;
+
+        if (!pharmacyName || !licenseNo || !ownerName || !email || !password || !phone || !city || !address) {
+            return res.status(400).json({ success: false, message: "All required fields must be filled." });
+        }
+
+        const existing = await Partner.findOne({ $or: [{ email }, { licenseNo }] });
+        if (existing) {
+            return res.status(400).json({ success: false, message: "Email or License Number already registered." });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const newPartner = new Partner({
+            pharmacyName, licenseNo, ownerName, email,
+            password: hashedPassword,
+            phone, city, address,
+            status: 'Pending'
+        });
+
+        await newPartner.save();
+
+        res.json({ success: true, message: "Registration submitted successfully. Awaiting admin approval." });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Registration failed: " + err.message });
+    }
+});
 app.get('/api/search', async (req, res) => {
     try {
         const { q } = req.query;
@@ -511,17 +582,23 @@ app.patch('/api/admin/partners/:id/status', async (req, res) => {
         res.json({ success: true, message: `Target registration state mutated to: ${status}` });
     } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
-// index.js (Yeh code "Panadol" aur "Calpol" jaisi saari meds ko cover karega)
+
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 app.get('/api/alternatives', async (req, res) => {
     try {
         const { name, genericName } = req.query;
-        
-        // Universal Filter:
-        // 1. Formula (genericName) match hona chahiye
-        // 2. Woh dawa khud nahi honi chahiye (name)
-        // 3. Stock > 0 hona chahiye (taake patient ko wahi mile jo available ho)
+
+        if (!genericName) {
+            return res.status(400).json({ success: false, message: "genericName is required" });
+        }
+
+        const safeGenericName = escapeRegex(genericName.trim());
+
         const alternatives = await Medicine.find({
-            genericName: { $regex: new RegExp(genericName.trim(), 'i') },
+            genericName: { $regex: new RegExp(safeGenericName, 'i') },
             name: { $ne: name },
             stock: { $gt: 0 } 
         });
@@ -769,6 +846,62 @@ app.delete('/api/orders/:id', async (req, res) => {
       success: false,
       message: "Error deleting order: " + err.message
     });
+  }
+});
+// ✅ RESERVATIONS API
+
+app.get('/api/reservations', authenticateToken, async (req, res) => {
+  try {
+    const reservations = await Reservation.find({ pharmacyName: req.user.name })
+      .sort({ createdAt: -1 });
+    res.json({ success: true, data: reservations });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Error fetching reservations: " + err.message });
+  }
+});
+
+app.post('/api/reservations', authenticateToken, async (req, res) => {
+  try {
+    const { name, email, phone, location, medicine, quantity, date, notes } = req.body;
+    if (!name || !medicine) {
+      return res.status(400).json({ success: false, message: "Customer name and medicine are required" });
+    }
+    const newReservation = new Reservation({
+      pharmacyName: req.user.name,
+      name, email, phone, location, medicine,
+      quantity: Number(quantity) || 1,
+      date, notes,
+      status: 'upcoming'
+    });
+    await newReservation.save();
+    res.json({ success: true, data: newReservation });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Error creating reservation: " + err.message });
+  }
+});
+
+app.patch('/api/reservations/:id', authenticateToken, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const updated = await Reservation.findOneAndUpdate(
+      { _id: req.params.id, pharmacyName: req.user.name },
+      { status },
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ success: false, message: "Reservation not found" });
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Error updating reservation: " + err.message });
+  }
+});
+
+app.delete('/api/reservations/:id', authenticateToken, async (req, res) => {
+  try {
+    const deleted = await Reservation.findOneAndDelete({ _id: req.params.id, pharmacyName: req.user.name });
+    if (!deleted) return res.status(404).json({ success: false, message: "Reservation not found" });
+    res.json({ success: true, message: "Reservation deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Error deleting reservation: " + err.message });
   }
 });
 

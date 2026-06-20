@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import "../PortalStyles.css";
-import { getReservations, addReservation, deleteReservation } from "../../api";
+import { getReservations, addReservation, deleteReservation, updateReservation } from "../../api";
 
 /* ─── Date helpers ──────────────────────────────────────── */
 const todayStr  = () => new Date().toISOString().split("T")[0];
@@ -169,11 +169,14 @@ const handleComplete = async (id) => {
 
   /* ══════════════════════════════════════════════════════ */
   return (
-    <div style={{ display:"flex" }}>
+    <div style={{ display:"flex", width:"100%", maxWidth:"100vw", overflowX:"hidden" }}>
       <Sidebar />
-      <div className="main-content">
+      <div
+        className="main-content"
+        style={{ flex:"1 1 0%", minWidth:0, width:"100%" }}
+      >
         <Navbar />
-        <div className="page-content">
+        <div className="page-content" style={{ width:"100%", maxWidth:"100%", boxSizing:"border-box" }}>
 
           {/* ── Page Header ── */}
           <div className="page-header">
@@ -249,7 +252,7 @@ const handleComplete = async (id) => {
           )}
 
           {/* ── Stat Cards (clickable filters) ── */}
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"16px", marginBottom:"20px" }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))", gap:"16px", marginBottom:"20px" }}>
             {STATS.map((s) => {
               const active = activeFilter === s.key;
               return (
@@ -338,7 +341,7 @@ const handleComplete = async (id) => {
             {loading ? (
               <div style={{ padding:"40px", textAlign:"center", color:"var(--text-muted)" }}>⏳ Loading reservations…</div>
             ) : (
-              <div className="table-wrap">
+              <div className="table-wrap" style={{ overflowX: "auto", width: "100%", WebkitOverflowScrolling: "touch" }}>
                 <table>
                   <thead>
                     <tr>

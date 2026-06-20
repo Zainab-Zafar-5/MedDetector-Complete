@@ -193,13 +193,13 @@ const Medicines = () => {
   };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div style={{ display: "flex", minHeight: "100vh", width: "100%", maxWidth: "100vw", overflowX: "hidden" }}>
       <Sidebar />
-      <div className="main-content" style={{ flex: 1, marginLeft: "var(--sidebar-w)" }}>
+      <div className="main-content" style={{ flex: "1 1 0%", minWidth: 0, width: "100%" }}>
         <Navbar />
-        <div className="page-content" style={{ padding: "30px" }}>
+        <div className="page-content" style={{ padding: "30px", width: "100%", maxWidth: "100%", boxSizing: "border-box" }}>
           
-          <div className="page-header" style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px", alignItems: "center" }}>
+          <div className="page-header" style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
             <div>
               <h1 style={{ fontSize: "24px", fontWeight: "800" }}>Medicine Inventory</h1>
               <p>Managing <strong>{totalItems}</strong> isolated items from Atlas</p>
@@ -305,8 +305,8 @@ const Medicines = () => {
             {loading ? (
               <div style={{ padding: "60px", textAlign: "center" }}>⏳ Parsing Distributed Node Packets...</div>
             ) : (
-              <div className="table-wrap">
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <div className="table-wrap" style={{ overflowX: "auto", width: "100%", WebkitOverflowScrolling: "touch" }}>
+                <table style={{ width: "100%", minWidth: "900px", borderCollapse: "collapse" }}>
                   <thead style={{ background: "#f8fafc", textAlign: "left" }}>
                     <tr>
                       <th style={{ padding: "16px" }}>#</th>
