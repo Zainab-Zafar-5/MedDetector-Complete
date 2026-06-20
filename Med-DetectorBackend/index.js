@@ -25,7 +25,7 @@ const Order = require('./models/Order');
 
 
 // Database Connection
-mongoose.connect(process.env.MONGO_URI || "mongodb+srv://meddetector:meddetector@cluster0.szfzg2s.mongodb.net/meddetector?retryWrites=true&w=majority")
+mongoose.connect(process.env.MONGO_URI || "mongodb+srv://Zainab:Zainab123@cluster0.njhsoin.mongodb.net/?appName=Cluster0")
 .then(() => console.log("✅ DB Connected Successfully"))
 .catch(err => console.error("❌ DB Error:", err.message));
 // --- 🔒 Stateful Interceptor Validation Guard (Middleware) ---
