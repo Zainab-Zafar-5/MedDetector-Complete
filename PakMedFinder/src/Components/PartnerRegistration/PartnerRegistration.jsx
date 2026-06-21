@@ -63,7 +63,7 @@ const PartnerRegistration = () => {
     }
   };
 
-  const handleSubmit = async () => {
+const handleSubmit = async () => {
     try {
       const response = await fetch('http://localhost:5000/api/register-partner', {
         method: 'POST',
@@ -74,9 +74,9 @@ const PartnerRegistration = () => {
       const result = await response.json();
 
       if (result.success) {
-        setStep(4);
+        setStep(4); // ✅ Sirf tab step 4 jao jab success ho
       } else {
-        alert("Error: " + (result.message || result.error)); 
+        alert("Error: " + (result.message || result.error)); // ❌ Step 4 mat jao
       }
     } catch (error) {
       console.error("Submission failed:", error);

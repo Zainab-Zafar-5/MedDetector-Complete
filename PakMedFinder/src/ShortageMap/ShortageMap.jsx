@@ -15,7 +15,7 @@ import {
   PackageSearch,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import './ShortageMap.module.css';
+import './ShortageMap.css';
 
 const API_BASE_URL = 'http://localhost:5000';
 const DEFAULT_CITY = 'Lahore';
@@ -37,7 +37,7 @@ L.Icon.Default.mergeOptions({
 // readable on the map at a glance, without opening a popup.
 const SEVERITY = {
   critical: { threshold: 5, color: '#C1432D', label: 'Critical' },
-  low: { threshold: 20, color: '#D98B3F', label: 'Low stock' },
+  low: { threshold: 20, color: '#E05A3A', label: 'Low stock' },
 };
 
 function getSeverity(stock) {
@@ -155,7 +155,7 @@ const ShortageMap = () => {
       try {
         const response = await fetch(
           `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(
-            query
+            query + ', Pakistan'
           )}`,
           { signal: controller.signal }
         );
@@ -275,7 +275,7 @@ const ShortageMap = () => {
       </header>
 
       <div className="shortage-map__canvas">
-        <MapContainer center={mapCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
+        <MapContainer center={mapCenter} zoom={13} style={{ height: '100%', width: '100%' }} whenReady={() => setTimeout(() => window.dispatchEvent(new Event('resize')), 100)}>
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
