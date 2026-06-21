@@ -463,16 +463,8 @@ const handleComplete = async (id) => {
                       );
                     }) : (
                       <tr>
-                        <td colSpan="11">
-                          <div className="empty-state">
-                            <div className="empty-icon">📅</div>
-                            <h3>No reservations found</h3>
-                            <p>
-                              {search || activeFilter !== "all"
-                                ? "Try adjusting your search or filter."
-                                : "Reservations will appear here."}
-                            </p>
-                          </div>
+                        <td colSpan="11" style={{ textAlign: "center", padding: "30px", color: "var(--text-muted)", fontSize: "14px" }}>
+                          {search || activeFilter !== "all" ? "No reservations match your search." : ""}
                         </td>
                       </tr>
                     )}

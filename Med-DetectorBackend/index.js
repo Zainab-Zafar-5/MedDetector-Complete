@@ -91,13 +91,16 @@ const partnerSchema = new mongoose.Schema({
     phone: String,
     city: String,
     address: String,
-    licenseNo: { type: String, required: true, unique: true }
+    licenseNo: { type: String, required: true, unique: true },
+    lat: { type: Number },   // ✅ ADD
+    lng: { type: Number }    // ✅ ADD
 }, { timestamps: true });
 
 const Partner = mongoose.models.Partner || mongoose.model('Partner', partnerSchema);
 // ✅ RESERVATION SCHEMA
 const reservationSchema = new mongoose.Schema({
     pharmacyName: { type: String, required: true, index: true },
+    licenseNo:    { type: String, index: true }, 
     name:     { type: String, required: true },
     email:    { type: String },
     phone:    { type: String },
@@ -535,17 +538,34 @@ app.post('/api/register-partner', async (req, res) => {
             return res.status(400).json({ success: false, message: "Email or License Number already registered." });
         }
 
+        // ✅ Geocode address to get lat/lng
+        let lat = null, lng = null;
+        try {
+            const geoQuery = encodeURIComponent(`${address}, ${city}, Pakistan`);
+            const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${geoQuery}`, {
+                headers: { 'User-Agent': 'MedDetector/1.0' }
+            });
+            const geoData = await geoRes.json();
+            if (geoData && geoData.length > 0) {
+                lat = parseFloat(geoData[0].lat);
+                lng = parseFloat(geoData[0].lon);
+                console.log(`✅ Geocoded: ${lat}, ${lng}`);
+            }
+        } catch (geoErr) {
+            console.warn("⚠️ Geocoding failed (non-fatal):", geoErr.message);
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const newPartner = new Partner({
             pharmacyName, licenseNo, ownerName, email,
             password: hashedPassword,
             phone, city, address,
+            lat, lng,          // ✅ Save coordinates
             status: 'Pending'
         });
 
         await newPartner.save();
-
         res.json({ success: true, message: "Registration submitted successfully. Awaiting admin approval." });
     } catch (err) {
         res.status(500).json({ success: false, message: "Registration failed: " + err.message });
@@ -559,11 +579,67 @@ app.get('/api/search', async (req, res) => {
         res.json({ success: true, data });
     } catch (error) { res.status(500).json({ error: error.message }); }
 });
-
+// ✅ ONE-TIME FIX: Existing pharmacies ko geocode karo
+app.get('/api/admin/geocode-pharmacies', async (req, res) => {
+    try {
+        const partners = await Partner.find({ $or: [{ lat: null }, { lat: { $exists: false } }] });
+        console.log(`Found ${partners.length} pharmacies without coordinates`);
+        
+        let updated = 0;
+        for (const partner of partners) {
+            try {
+                const geoQuery = encodeURIComponent(`${partner.address}, ${partner.city}, Pakistan`);
+                const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${geoQuery}`, {
+                    headers: { 'User-Agent': 'MedDetector/1.0' }
+                });
+                const geoData = await geoRes.json();
+                
+                if (geoData && geoData.length > 0) {
+                    await Partner.findByIdAndUpdate(partner._id, {
+                        lat: parseFloat(geoData[0].lat),
+                        lng: parseFloat(geoData[0].lon)
+                    });
+                    console.log(`✅ ${partner.pharmacyName}: ${geoData[0].lat}, ${geoData[0].lon}`);
+                    updated++;
+                }
+                // Nominatim rate limit — 1 request per second
+                await new Promise(r => setTimeout(r, 1100));
+            } catch (e) {
+                console.warn(`⚠️ Failed for ${partner.pharmacyName}:`, e.message);
+            }
+        }
+        
+        res.json({ success: true, message: `Updated ${updated} of ${partners.length} pharmacies` });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
 app.get('/api/shortages', async (req, res) => {
     try {
-        const shortages = await Medicine.find({ stock: { $lt: 20 } });
-        res.json({ success: true, data: shortages });
+        // ✅ Dono queries ek saath chalao — Promise.all se fast hoga
+        const [shortages, partners] = await Promise.all([
+            Medicine.find({ stock: { $lt: 20 } }).lean(),
+            Partner.find({ lat: { $exists: true, $ne: null } }, 'pharmacyName licenseNo lat lng').lean()
+        ]);
+
+        const partnerMap = {};
+        partners.forEach(p => {
+            if (p.licenseNo) partnerMap[p.licenseNo] = p;
+            if (p.pharmacyName) partnerMap[p.pharmacyName] = p;
+        });
+
+        const enriched = shortages.map(med => {
+            if (!med.lat || !med.lng) {
+                const partner = partnerMap[med.licenseNo] || partnerMap[med.pharmacyName];
+                if (partner) {
+                    med.lat = partner.lat;
+                    med.lng = partner.lng;
+                }
+            }
+            return med;
+        });
+
+        res.json({ success: true, data: enriched });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
@@ -852,8 +928,12 @@ app.delete('/api/orders/:id', async (req, res) => {
 
 app.get('/api/reservations', authenticateToken, async (req, res) => {
   try {
-    const reservations = await Reservation.find({ pharmacyName: req.user.name })
-      .sort({ createdAt: -1 });
+    const reservations = await Reservation.find({
+      $or: [
+        { pharmacyName: req.user.name },
+        { licenseNo: req.user.licenseNo }
+      ]
+    }).sort({ createdAt: -1 });
     res.json({ success: true, data: reservations });
   } catch (err) {
     res.status(500).json({ success: false, message: "Error fetching reservations: " + err.message });
@@ -867,12 +947,13 @@ app.post('/api/reservations', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, message: "Customer name and medicine are required" });
     }
     const newReservation = new Reservation({
-      pharmacyName: req.user.name,
-      name, email, phone, location, medicine,
-      quantity: Number(quantity) || 1,
-      date, notes,
-      status: 'upcoming'
-    });
+  pharmacyName: req.user.name,
+  licenseNo: req.user.licenseNo,  // ✅ ADD
+  name, email, phone, location, medicine,
+  quantity: Number(quantity) || 1,
+  date, notes,
+  status: 'upcoming'
+});
     await newReservation.save();
     res.json({ success: true, data: newReservation });
   } catch (err) {
