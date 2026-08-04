@@ -6,6 +6,7 @@ const multer = require('multer');
 const cors = require('cors');
 const csv = require('csv-parser');
 const fs = require('fs');
+const nodemailer = require("nodemailer");
 
 const bcrypt = require('bcrypt');
 const cloudinary = require('cloudinary').v2;
@@ -25,9 +26,25 @@ const Order = require('./models/Order');
 
 
 // Database Connection
-mongoose.connect(process.env.MONGO_URI || "mongodb+srv://Zainab:Zainab123@cluster0.njhsoin.mongodb.net/?appName=Cluster0")
+// Database Connection
+mongoose.set('bufferCommands', true); // queries wait for connection instead of failing instantly
+mongoose.set('bufferTimeoutMS', 30000); // give Atlas up to 30s before giving up (was default 10s)
+
+mongoose.connect(process.env.MONGO_URI || "mongodb+srv://Zainab:Zainab123@cluster0.njhsoin.mongodb.net/?appName=Cluster0", {
+    serverSelectionTimeoutMS: 15000, // fail fast with a clear reason if Atlas is unreachable
+})
 .then(() => console.log("✅ DB Connected Successfully"))
-.catch(err => console.error("❌ DB Error:", err.message));
+.catch(err => console.error("❌ DB Error (check Atlas Network Access / IP whitelist):", err.message));
+
+mongoose.connection.on('disconnected', () => {
+    console.warn("⚠️ MongoDB disconnected — attempting to reconnect...");
+});
+mongoose.connection.on('reconnected', () => {
+    console.log("✅ MongoDB reconnected");
+});
+mongoose.connection.on('error', (err) => {
+    console.error("❌ MongoDB connection error:", err.message);
+});
 // --- 🔒 Stateful Interceptor Validation Guard (Middleware) ---
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -92,11 +109,92 @@ const partnerSchema = new mongoose.Schema({
     city: String,
     address: String,
     licenseNo: { type: String, required: true, unique: true },
-    lat: { type: Number },   // ✅ ADD
-    lng: { type: Number }    // ✅ ADD
+    licenseImageUrl: { type: String, default: '' }, 
+    lat: { type: Number },
+    lng: { type: Number },
+    rejectionReason: { type: String, default: '' },
+    statusHistory: [
+        {
+            status: String,
+            reason: String,
+            updatedAt: { type: Date, default: Date.now }
+        }
+    ]
 }, { timestamps: true });
 
 const Partner = mongoose.models.Partner || mongoose.model('Partner', partnerSchema);
+// Email transporter setup
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
+
+// Reusable function to send status emails
+async function sendStatusEmail(partner, status, reason, wasReactivated = false) {
+    try {
+        const isApproved = status === 'Approved' && !wasReactivated;
+        const isReactivated = status === 'Approved' && wasReactivated;
+
+        const subject = isReactivated
+            ? `✅ Your pharmacy "${partner.pharmacyName}" has been reactivated!`
+            : isApproved
+            ? `🎉 Your pharmacy "${partner.pharmacyName}" has been approved!`
+            : `Update on your "${partner.pharmacyName}" registration`;
+
+        const html = isReactivated
+            ? `
+                <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto;">
+                    <h2 style="color: #16a34a;">Account Reactivated ✅</h2>
+                    <p>Hi ${partner.ownerName},</p>
+                    <p>Welcome back! Your pharmacy <strong>${partner.pharmacyName}</strong> has been reactivated and is now live on MedDetector again.</p>
+                    <p>You can now log in and resume managing your inventory.</p>
+                    <p style="color:#64748b; font-size:0.85rem;">— MedDetector Team</p>
+                </div>
+              `
+            : isApproved
+            ? `
+                <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto;">
+                    <h2 style="color: #16a34a;">Application Approved ✅</h2>
+                    <p>Hi ${partner.ownerName},</p>
+                    <p>Great news! Your pharmacy <strong>${partner.pharmacyName}</strong> has been approved and is now live on MedDetector.</p>
+                    <p>You can now log in and start managing your inventory.</p>
+                    <p style="color:#64748b; font-size:0.85rem;">— MedDetector Team</p>
+                </div>
+              
+              `
+            : `
+                <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto;">
+                    <h2 style="color: #dc2626;">${status === 'Suspended' ? 'Account Suspended' : 'Application Rejected'}</h2>
+                    <p>Hi ${partner.ownerName},</p>
+                    <p>${status === 'Suspended'
+                        ? `Your pharmacy <strong>${partner.pharmacyName}</strong> has been temporarily suspended.`
+                        : `We reviewed your pharmacy <strong>${partner.pharmacyName}</strong> registration and unfortunately it was not approved at this time.`
+                    }</p>
+                    <p><strong>Reason:</strong> ${reason || 'Not specified'}</p>
+                    <p style="color:#64748b; font-size:0.85rem;">— MedDetector Team</p>
+                </div>
+              `;
+await transporter.sendMail({
+    from: `"MedDetector Team" <${process.env.EMAIL_USER}>`,
+    to: partner.email,
+    replyTo: process.env.EMAIL_USER,
+    subject,
+    html,
+   text: isReactivated
+    ? `Hi ${partner.ownerName}, welcome back! Your pharmacy "${partner.pharmacyName}" has been reactivated and is now live on MedDetector again. - MedDetector Team`
+    : isApproved
+    ? `Hi ${partner.ownerName}, your pharmacy "${partner.pharmacyName}" has been approved and is now live on MedDetector. You can now log in and start managing your inventory. - MedDetector Team`
+    : `Hi ${partner.ownerName}, ${status === 'Suspended' ? `your pharmacy "${partner.pharmacyName}" has been temporarily suspended.` : `we reviewed your pharmacy "${partner.pharmacyName}" registration and unfortunately it was not approved at this time.`} Reason: ${reason || 'Not specified'} - MedDetector Team`
+});
+
+        console.log(`📧 Email sent to ${partner.email}`);
+    } catch (err) {
+        console.error("❌ Email sending failed:", err.message);
+    }
+}
 // ✅ RESERVATION SCHEMA
 const reservationSchema = new mongoose.Schema({
     pharmacyName: { type: String, required: true, index: true },
@@ -114,6 +212,22 @@ const reservationSchema = new mongoose.Schema({
 
 const Reservation = mongoose.models.Reservation || mongoose.model('Reservation', reservationSchema);
 
+// ✅ FEEDBACK SCHEMA
+const feedbackSchema = new mongoose.Schema({
+    type: { type: String, enum: ['pharmacy', 'website'], required: true },
+    pharmacyName: { type: String },
+    reviewerName: { type: String, required: true },
+    reviewerEmail: { type: String, required: true },
+    rating: { type: Number, min: 1, max: 5, required: true },
+    comment: { type: String, required: true, trim: true, maxlength: 500 },
+    reply: {
+        text: { type: String, trim: true },
+        repliedAt: { type: Date }
+    }
+}, { timestamps: true });
+
+const Feedback = mongoose.models.Feedback || mongoose.model('Feedback', feedbackSchema);
+
 
 
 cloudinary.config({ 
@@ -122,31 +236,12 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'prescriptions',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp']
-  }
-});
-
 // Ab yahan variables define karein
 const uploadCSV = multer({ dest: 'uploads/' });
-const uploadCloud = multer({ storage: storage });
-
-// ✅ MULTER ERROR HANDLER - Catches upload errors BEFORE route
-app.use((err, req, res, next) => {
-    // Only handle multer errors
-    if (err.name === 'MulterError') {
-        console.error("❌ Multer Error:", err.message);
-        return res.status(400).json({ 
-            success: false, 
-            message: "File upload error: " + err.message 
-        });
-    }
-    
-    // Pass other errors to next handler
-    next(err);
+const uploadCloud = multer({ storage: multer.memoryStorage() });
+const uploadLicense = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }
 });
 // Generate professional order number
 function generateOrderNumber() {
@@ -207,50 +302,40 @@ app.post('/api/medicines/bulk-import', authenticateToken, uploadCSV.single('file
     
 });
 
-// ✅ MINIMAL FIX FOR PRESCRIPTION UPLOAD ENDPOINT
-// Replace lines 150-155 in your index.js with this code:
-
-app.post('/api/prescriptions/upload', uploadCloud.single('prescription'), (req, res) => {
+app.post('/api/prescriptions/upload', uploadCloud.single('prescription'), async (req, res) => {
     try {
-        console.log("📥 Upload request received");
-        console.log("📂 req.file object:", JSON.stringify({
-            exists: !!req.file,
-            hasPath: !!req.file?.path,
-            filename: req.file?.filename,
-            originalname: req.file?.originalname
-        }));
-        
-        // Check if file exists
+        console.log("📥 Prescription upload request received");
+
         if (!req.file) {
-            console.log("❌ No file in request");
             return res.status(400).json({ 
                 success: false, 
                 message: "No file provided" 
             });
         }
 
-        // ✅ CRITICAL: Check if Cloudinary URL exists
-        if (!req.file.path) {
-            console.log("❌ Cloudinary upload failed - URL not available");
-            console.log("Full req.file object:", req.file);
-            return res.status(500).json({ 
-                success: false, 
-                message: "Cloudinary upload failed - unable to get image URL" 
-            });
-        }
+        // ✅ Manually Cloudinary pe upload karo (memory buffer se)
+       const uploadResult = await new Promise((resolve, reject) => {
+    // ✅ 30 second timeout
+    const timer = setTimeout(() => {
+        reject(new Error('Request Timeout'));
+    }, 30000);
 
-        const cloudinaryUrl = req.file.path;
-        
-        // Validate URL format
-        if (!cloudinaryUrl.includes('res.cloudinary.com')) {
-            console.log("❌ Invalid Cloudinary URL format:", cloudinaryUrl);
-            return res.status(500).json({ 
-                success: false, 
-                message: "Invalid Cloudinary URL received" 
-            });
+    const stream = cloudinary.uploader.upload_stream(
+        { 
+            folder: 'prescriptions', 
+            resource_type: 'image',
+            timeout: 60000  // Cloudinary ko bhi 60s do
+        },
+        (error, result) => {
+            clearTimeout(timer);
+            if (error) reject(error);
+            else resolve(result);
         }
-        
-        console.log("✅ Valid Cloudinary URL:", cloudinaryUrl);
+    );
+    stream.end(req.file.buffer);
+});
+        const cloudinaryUrl = uploadResult.secure_url;
+        console.log("✅ Prescription uploaded to Cloudinary:", cloudinaryUrl);
 
         return res.status(200).json({ 
             success: true, 
@@ -259,9 +344,7 @@ app.post('/api/prescriptions/upload', uploadCloud.single('prescription'), (req, 
         });
 
     } catch (error) {
-        console.error("❌ Upload Error:", error.message);
-        console.error("Error stack:", error.stack);
-        
+        console.error("❌ Prescription Upload Error:", error.message);
         return res.status(500).json({ 
             success: false, 
             message: "Upload failed: " + error.message 
@@ -289,7 +372,7 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
         const lowStock = await Medicine.countDocuments({ ...isolationFilter, stock: { $lt: 20 } });
         const totalReservations = await Medicine.countDocuments({ ...isolationFilter, status: 'Pending' });
 
-        const lowStockList = await Medicine.find({ ...isolationFilter, stock: { $lt: 20 } }).sort({ stock: 1 }).limit(15);
+        const lowStockList = await Medicine.find({ ...isolationFilter, stock: { $lt: 20 } }).sort({ stock: 1 });
         
         const rawExpired = await Medicine.find({ ...isolationFilter, expiryDate: { $lt: today } });
         const rawExpiringSoon = await Medicine.find({ 
@@ -351,6 +434,17 @@ app.get('/api/medicines', authenticateToken, async (req, res) => {
         const limit = 50; 
         const skip = (page - 1) * limit;
         const queryFilter = { $or: [ { licenseNo: req.user.licenseNo }, { pharmacyName: req.user.name } ] };
+
+        const search = (req.query.search || '').trim();
+        if (search) {
+            const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            queryFilter.$and = [{
+                $or: [
+                    { name: { $regex: escaped, $options: 'i' } },
+                    { genericName: { $regex: escaped, $options: 'i' } }
+                ]
+            }];
+        }
 
         const totalItems = await Medicine.countDocuments(queryFilter);
         const medicines = await Medicine.find(queryFilter).sort({ createdAt: -1 }).skip(skip).limit(limit);
@@ -525,14 +619,53 @@ app.post('/api/login', async (req, res) => {
 // 🔍 MODULE F: PUBLIC System ROUTING INTERFACES
 // ==========================================
 
-app.post('/api/register-partner', async (req, res) => {
+app.post('/api/register-partner', uploadLicense.single('licenseImage'), async (req, res) => {
     try {
         const { pharmacyName, licenseNo, posSystem, ownerName, email, password, phone, city, address } = req.body;
 
         if (!pharmacyName || !licenseNo || !ownerName || !email || !password || !phone || !city || !address) {
             return res.status(400).json({ success: false, message: "All required fields must be filled." });
+            
         }
+       if (!req.file) {
+    return res.status(400).json({ 
+        success: false, 
+        message: "License image is required." 
+    });
+}
+// ✅ Cloudinary pe manually upload karo — with timeout
+let licenseImageUrl = '';
+try {
+    const uploadResult = await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            reject(new Error('Request Timeout'));
+        }, 60000);
 
+        const stream = cloudinary.uploader.upload_stream(
+            { 
+                folder: 'license_images', 
+                resource_type: 'image',
+                quality: 'auto:low',
+                fetch_format: 'auto',
+                timeout: 120000
+            },
+            (error, result) => {
+                clearTimeout(timer);
+                if (error) reject(error);
+                else resolve(result);
+            }
+        );
+        stream.end(req.file.buffer);
+    });
+    licenseImageUrl = uploadResult.secure_url;
+    console.log("✅ License uploaded:", licenseImageUrl);
+} catch (cloudErr) {
+    console.error("❌ License upload failed:", cloudErr.message);
+    return res.status(500).json({ 
+        success: false, 
+        message: "License image upload failed: " + cloudErr.message 
+    });
+}
         const existing = await Partner.findOne({ $or: [{ email }, { licenseNo }] });
         if (existing) {
             return res.status(400).json({ success: false, message: "Email or License Number already registered." });
@@ -561,7 +694,8 @@ app.post('/api/register-partner', async (req, res) => {
             pharmacyName, licenseNo, ownerName, email,
             password: hashedPassword,
             phone, city, address,
-            lat, lng,          // ✅ Save coordinates
+            lat, lng,
+            licenseImageUrl: licenseImageUrl,
             status: 'Pending'
         });
 
@@ -573,11 +707,52 @@ app.post('/api/register-partner', async (req, res) => {
 });
 app.get('/api/search', async (req, res) => {
     try {
-        const { q } = req.query;
-        let query = q ? { $or: [ { name: { $regex: q, $options: 'i' } }, { genericName: { $regex: q, $options: 'i' } } ] } : {};
-        const data = await Medicine.find(query);
+        const { q, city } = req.query;
+
+        // Medicine name/genericName filter
+        let query = q ? { 
+            $or: [ 
+                { name: { $regex: q, $options: 'i' } }, 
+                { genericName: { $regex: q, $options: 'i' } } 
+            ] 
+        } : {};
+
+        const medicines = await Medicine.find(query).lean();
+
+        // City/area filter — address ya city dono check karo
+        let partnerQuery = {};
+        if (city && city.trim()) {
+            partnerQuery = { 
+                $or: [
+                    { city: { $regex: city.trim(), $options: 'i' } },
+                    { address: { $regex: city.trim(), $options: 'i' } }
+                ]
+            };
+        }
+        const partners = await Partner.find(
+            partnerQuery, 
+            'pharmacyName email city address'
+        ).lean();
+
+        const allowedPharmacies = new Set(partners.map(p => p.pharmacyName));
+        const emailMap = partners.reduce(
+            (acc, p) => ({ ...acc, [p.pharmacyName]: p.email }), {}
+        );
+
+        // Agar city filter hai toh sirf us area ki medicines dikhao
+        const filtered = city && city.trim()
+            ? medicines.filter(med => allowedPharmacies.has(med.pharmacyName))
+            : medicines;
+
+        const data = filtered.map(med => ({
+            ...med,
+            pharmacyEmail: emailMap[med.pharmacyName] || null
+        }));
+
         res.json({ success: true, data });
-    } catch (error) { res.status(500).json({ error: error.message }); }
+    } catch (error) { 
+        res.status(500).json({ error: error.message }); 
+    }
 });
 // ✅ ONE-TIME FIX: Existing pharmacies ko geocode karo
 app.get('/api/admin/geocode-pharmacies', async (req, res) => {
@@ -653,10 +828,118 @@ app.get('/api/admin/partners', async (req, res) => {
 
 app.patch('/api/admin/partners/:id/status', async (req, res) => {
     try {
-        const { status } = req.body;
-        await Partner.findByIdAndUpdate(req.params.id, { status });
-        res.json({ success: true, message: `Target registration state mutated to: ${status}` });
+        const { status, rejectionReason } = req.body;
+
+        const partner = await Partner.findById(req.params.id);
+        if (!partner) {
+            return res.status(404).json({ success: false, message: 'Partner not found' });
+        }
+
+        partner.status = status;
+        if (status === 'Rejected' || status === 'Suspended') {
+            partner.rejectionReason = rejectionReason || '';
+        }
+        partner.statusHistory.push({
+            status,
+            reason: rejectionReason || '',
+            updatedAt: new Date()
+        });
+
+        await partner.save();
+
+        // Email notification (non-blocking)
+        sendStatusEmail(partner, status, rejectionReason);
+
+        res.json({ success: true, message: `Target registration state mutated to: ${status}`, data: partner });
     } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+// ==========================================
+// 💬 MODULE: FEEDBACK
+// ==========================================
+
+app.post('/api/feedback', async (req, res) => {
+    try {
+        const { type, pharmacyName, reviewerName, reviewerEmail, rating, comment } = req.body;
+        if (!type || !reviewerName || !reviewerEmail || !rating || !comment) {
+            return res.status(400).json({ success: false, message: "Missing required fields." });
+        }
+        if (type === 'pharmacy' && !pharmacyName) {
+            return res.status(400).json({ success: false, message: "pharmacyName is required for pharmacy feedback." });
+        }
+        const newFeedback = new Feedback({
+            type,
+            pharmacyName: type === 'pharmacy' ? pharmacyName.trim() : undefined,
+            reviewerName: reviewerName.trim(),
+            reviewerEmail: reviewerEmail.trim(),
+            rating: Number(rating),
+            comment: comment.trim()
+        });
+        await newFeedback.save();
+        res.status(201).json({ success: true, message: "Feedback submitted successfully!", data: newFeedback });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Failed to submit feedback: " + err.message });
+    }
+});
+
+app.get('/api/feedback/public', async (req, res) => {
+    try {
+        const data = await Feedback.find({ type: 'pharmacy' }).sort({ createdAt: -1 });
+        res.json({ success: true, data });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.get('/api/feedback/pharmacy', authenticateToken, async (req, res) => {
+    try {
+        const data = await Feedback.find({ type: 'pharmacy', pharmacyName: req.user.name }).sort({ createdAt: -1 });
+        res.json({ success: true, data });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.put('/api/feedback/:id/reply', authenticateToken, async (req, res) => {
+    try {
+        const { text } = req.body;
+        if (!text || !text.trim()) {
+            return res.status(400).json({ success: false, message: "Reply text is required." });
+        }
+        const feedback = await Feedback.findById(req.params.id);
+        if (!feedback) {
+            return res.status(404).json({ success: false, message: "Feedback not found." });
+        }
+        if (feedback.type !== 'pharmacy' || feedback.pharmacyName !== req.user.name) {
+            return res.status(403).json({ success: false, message: "Not authorized to reply to this feedback." });
+        }
+        feedback.reply = { text: text.trim(), repliedAt: new Date() };
+        await feedback.save();
+        res.json({ success: true, data: feedback });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.get('/api/feedback/admin', async (req, res) => {
+    try {
+        const data = await Feedback.find().sort({ createdAt: -1 });
+        res.json({ success: true, data });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.get('/api/pharmacies', async (req, res) => {
+    try {
+        const { q } = req.query;
+        const query = { status: 'Approved' };
+        if (q) query.pharmacyName = { $regex: q, $options: 'i' };
+        const data = await Partner.find(query, 'pharmacyName city licenseNo');
+        res.json({ success: true, data });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
 });
 
 function escapeRegex(str) {
@@ -1016,6 +1299,15 @@ app.get('/api/orders/:id/prescription', async (req, res) => {
     console.error("Error fetching prescription:", err);
     res.status(500).json({ success: false, message: "Error fetching prescription" });
   }
+});
+app.use((err, req, res, next) => {
+    if (err.name === 'MulterError') {
+        return res.status(400).json({ 
+            success: false, 
+            message: "File upload error: " + err.message 
+        });
+    }
+    next(err);
 });
 
 
